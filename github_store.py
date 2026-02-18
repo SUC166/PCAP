@@ -229,6 +229,28 @@ def update_admin_credentials(username: str, new_username: str,
             return True, ""
     return False, "Admin not found."
 
+def save_admin_theme(username: str, theme: str):
+    """Persist an admin preferred theme. Background write."""
+    try:
+        hdrs = _headers(); repo = _repo()
+    except Exception:
+        return
+
+    def _do():
+        try:
+            content, sha = _read_file(ADMINS_PATH, hdrs, repo)
+            admins = content.get("admins", []) if content else []
+            for i, a in enumerate(admins):
+                if a["username"].lower() == username.lower():
+                    admins[i]["theme"] = theme
+                    break
+            _write_file(ADMINS_PATH, {"admins": admins},
+                        f"PCAP theme pref: {username} to {theme}", hdrs, repo, sha)
+        except Exception:
+            pass
+
+    _enqueue(_do)
+
 def bootstrap_needed() -> bool:
     return len(load_admins()) == 0
 

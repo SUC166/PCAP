@@ -424,47 +424,89 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-nav_l, nav_m, nav_r, nav_theme = st.columns([3.5, 1, 1, 0.7])
+# ── NAV BAR: sync indicator | view btn | [logout] + theme toggle ──────────────
+is_dark = st.session_state.theme == "dark"
+
+# Inject the toggle switch CSS + hidden checkbox trick
+st.markdown(f"""
+<style>
+.theme-toggle-wrap {{
+    display:flex; align-items:center; justify-content:flex-end;
+    gap:8px; padding-top:4px;
+}}
+.theme-label {{ font-size:.82rem; color:{'#c8ddd0' if is_dark else '#555'}; font-weight:600; }}
+.toggle-switch {{ position:relative; display:inline-block; width:46px; height:24px; }}
+.toggle-switch input {{ opacity:0; width:0; height:0; }}
+.toggle-slider {{
+    position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
+    background:{'#00cc66' if is_dark else '#ccc'};
+    border-radius:24px; transition:.3s;
+}}
+.toggle-slider:before {{
+    position:absolute; content:""; height:18px; width:18px; left:{'24px' if is_dark else '3px'};
+    bottom:3px; background:white; border-radius:50%; transition:.3s;
+}}
+</style>
+""", unsafe_allow_html=True)
+
+nav_l, nav_mid, nav_r = st.columns([3.5, 1.1, 1.4])
+
 with nav_l:
-    # Subtle background sync indicator — only visible to logged-in admins
     if st.session_state.admin_logged_in:
         try:
             from github_store import _write_queue, _queue_lock
             with _queue_lock:
                 pending = len(_write_queue)
             if pending > 0:
-                st.caption(f"⏳ Syncing to GitHub… ({pending} pending)")
+                st.caption(f"⏳ Syncing… ({pending} pending)")
             else:
-                st.caption("✅ All changes synced")
+                st.caption("✅ Synced")
         except Exception:
             pass
-with nav_theme:
-    is_dark = st.session_state.theme == "dark"
-    if st.button("🌙" if not is_dark else "☀️", help="Toggle light/dark theme"):
-        st.session_state.theme = "dark" if not is_dark else "light"
-        st.rerun()
-with nav_m:
+
+with nav_mid:
     if st.session_state.view == "student":
-        if st.button("\U0001F512 Admin"):
+        if st.button("\U0001F512 Admin", use_container_width=True):
             st.session_state.view = "admin_login"
             st.rerun()
     else:
-        if st.button("\u2190 Student"):
-            st.session_state.view = "student"
-            st.rerun()
-with nav_r:
-    if st.session_state.admin_logged_in:
-        if st.button("Logout"):
-            try:
-                from github_store import append_log
-                append_log(st.session_state.admin_user["username"], "LOGOUT", "Admin logged out")
-            except Exception:
-                pass
-            st.session_state.admin_logged_in = False
-            st.session_state.admin_user = None
+        if st.button("\u2190 Student", use_container_width=True):
             st.session_state.view = "student"
             st.rerun()
 
+with nav_r:
+    # Right side: theme toggle + logout side by side
+    right_cols = st.columns([1, 1]) if st.session_state.admin_logged_in else [st, None]
+    
+    # Theme toggle button — styled to look like a pill toggle
+    icon = "☀️" if is_dark else "🌙"
+    label = "Light" if is_dark else "Dark"
+    with right_cols[0]:
+        if st.button(f"{icon} {label}", use_container_width=True, key="theme_toggle_btn",
+                     help="Switch theme"):
+            new_theme = "light" if is_dark else "dark"
+            st.session_state.theme = new_theme
+            # Save to GitHub if logged in
+            if st.session_state.admin_logged_in:
+                try:
+                    from github_store import save_admin_theme
+                    save_admin_theme(st.session_state.admin_user["username"], new_theme)
+                except Exception:
+                    pass
+            st.rerun()
+    
+    if st.session_state.admin_logged_in and right_cols[1] is not None:
+        with right_cols[1]:
+            if st.button("Logout", use_container_width=True, key="logout_btn"):
+                try:
+                    from github_store import append_log
+                    append_log(st.session_state.admin_user["username"], "LOGOUT", "Admin logged out")
+                except Exception:
+                    pass
+                st.session_state.admin_logged_in = False
+                st.session_state.admin_user = None
+                st.session_state.view = "student"
+                st.rerun()
 st.divider()
 
 
@@ -630,9 +672,12 @@ def admin_login_view():
         st.session_state.admin_logged_in = True
         st.session_state.admin_user = admin
         st.session_state.view = "admin_panel"
+        # Load this admin's saved theme preference
+        saved_theme = admin.get("theme", "light")
+        st.session_state.theme = saved_theme
         try:
             from github_store import append_log
-            append_log(admin["username"], "LOGIN", f"Admin login successful")
+            append_log(admin["username"], "LOGIN", f"Admin login successful | Theme: {saved_theme}")
         except Exception:
             pass
         st.rerun()
