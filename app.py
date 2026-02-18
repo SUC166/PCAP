@@ -20,9 +20,6 @@ LIGHT_CSS = """
     --bg:           #ffffff;
     --bg-secondary: #f7f9f7;
     --surface:      #f0faf4;
-    --surface-err:  #fff5f5;
-    --surface-warn: #fffbe6;
-    --surface-info: #f0f4ff;
     --border:       #e0e0e0;
     --text:         #1a1a1a;
     --text-muted:   #555555;
@@ -42,11 +39,113 @@ LIGHT_CSS = """
     --hdr-shadow:   0 8px 32px rgba(0,102,51,.18);
 }
 
-html,body,[class*="css"]{
-    font-family:'Inter',sans-serif;
-    background-color:var(--bg) !important;
-    color:var(--text) !important;
+/* ── FULL LIGHT RESET — overrides dark config.toml on every element ── */
+html, body,
+.stApp,
+.stApp > div,
+section.main,
+section.main > div,
+div[data-testid="stAppViewContainer"],
+div[data-testid="stAppViewBlockContainer"],
+div[data-testid="block-container"],
+div[data-testid="stVerticalBlock"],
+div[data-testid="stHorizontalBlock"],
+div[data-testid="column"],
+[class*="css"] {
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+    font-family: 'Inter', sans-serif;
 }
+
+/* Top chrome */
+header[data-testid="stHeader"],
+div[data-testid="stHeader"],
+div[data-testid="stToolbar"],
+div[data-testid="stDecoration"] {
+    background-color: var(--bg) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+div[data-testid="stToolbar"] button,
+div[data-testid="stToolbar"] svg {
+    color: var(--text-muted) !important;
+    fill: var(--text-muted) !important;
+}
+
+/* All text elements */
+p, span, h1, h2, h3, h4, h5, h6,
+label, .stMarkdown, .stMarkdown p,
+.stMarkdown li, .stMarkdown h1,
+.stMarkdown h2, .stMarkdown h3,
+div[data-testid="stText"],
+div[data-testid="stCaptionContainer"],
+.stCaption {
+    color: var(--text) !important;
+}
+
+/* Inputs */
+.stTextInput > div > div > input,
+.stNumberInput > div > div > input,
+.stTextArea > div > div > textarea {
+    background: var(--bg-secondary) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+/* Selects / dropdowns */
+.stSelectbox > div > div,
+.stSelectbox > div > div > div,
+.stSelectbox [data-baseweb="select"] > div {
+    background: var(--bg-secondary) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    background: var(--bg-secondary) !important;
+}
+.stTabs [data-baseweb="tab"] {
+    color: var(--text-muted) !important;
+    background: transparent !important;
+}
+.stTabs [aria-selected="true"] {
+    color: var(--green) !important;
+}
+
+/* Metrics */
+div[data-testid="stMetricValue"] { color: var(--green) !important; }
+div[data-testid="stMetricLabel"] { color: var(--text-muted) !important; }
+
+/* Alerts / info boxes */
+.stAlert, div[data-testid="stAlert"] {
+    background: var(--bg-secondary) !important;
+    color: var(--text) !important;
+}
+.stAlert p, .stAlert span { color: var(--text) !important; }
+
+/* DataFrames */
+.stDataFrame, .stDataFrame td, .stDataFrame th {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+}
+
+/* File uploader */
+div[data-testid="stFileUploader"] {
+    background: var(--bg-secondary) !important;
+    color: var(--text) !important;
+}
+div[data-testid="stFileUploader"] span,
+div[data-testid="stFileUploader"] p {
+    color: var(--text-muted) !important;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background: var(--bg-secondary) !important;
+}
+
+/* Dividers */
+hr { border-color: var(--border) !important; }
 
 /* ── Header ── */
 .hdr{
@@ -54,8 +153,8 @@ html,body,[class*="css"]{
     border-radius:16px;padding:2rem 2.5rem;text-align:center;
     margin-bottom:1.5rem;box-shadow:var(--hdr-shadow);
 }
-.hdr h1{color:#fff;font-size:2rem;font-weight:700;margin:0;letter-spacing:1px}
-.hdr p{color:#d4f5d4;font-size:.95rem;margin:.4rem 0 0}
+.hdr h1{color:#fff !important;font-size:2rem;font-weight:700;margin:0;letter-spacing:1px}
+.hdr p{color:#d4f5d4 !important;font-size:.95rem;margin:.4rem 0 0}
 
 /* ── Cards ── */
 .ok-card{
@@ -63,15 +162,15 @@ html,body,[class*="css"]{
     border-radius:10px;padding:1.2rem 1.5rem;margin-bottom:.5rem;
     box-shadow:var(--card-shadow);
 }
-.ok-card h3{color:var(--green);margin:0 0 .5rem;font-size:1.1rem}
-.ok-card p{margin:.2rem 0;color:var(--text-muted);font-size:.92rem}
+.ok-card h3{color:var(--green) !important;margin:0 0 .5rem;font-size:1.1rem}
+.ok-card p{margin:.2rem 0;color:var(--text-muted) !important;font-size:.92rem}
 
 .err-card{
     background:var(--red-bg);border-left:5px solid var(--red);
     border-radius:10px;padding:1.2rem 1.5rem;margin-bottom:.5rem;
 }
-.err-card h4{color:var(--red);margin:0 0 .4rem}
-.err-card p{margin:.2rem 0;color:var(--text-muted);font-size:.91rem}
+.err-card h4{color:var(--red) !important;margin:0 0 .4rem}
+.err-card p{margin:.2rem 0;color:var(--text-muted) !important;font-size:.91rem}
 
 /* ── Info boxes ── */
 .info-box{
@@ -82,67 +181,44 @@ html,body,[class*="css"]{
     background:var(--blue-bg);border-left:5px solid var(--blue);
     border-radius:10px;padding:1.2rem 1.6rem;margin-bottom:1rem;
 }
-.setup-box h4{color:var(--blue);margin:0 0 .6rem}
-.setup-box code{background:var(--blue-code-bg);padding:2px 6px;border-radius:4px;font-size:.9rem}
-.setup-box pre{background:var(--blue-code-bg);padding:.8rem;border-radius:6px;font-size:.82rem;overflow-x:auto}
+.setup-box h4{color:var(--blue) !important;margin:0 0 .6rem}
+.setup-box code{background:var(--blue-code-bg);color:var(--text) !important;padding:2px 6px;border-radius:4px;font-size:.9rem}
+.setup-box pre{background:var(--blue-code-bg);color:var(--text) !important;padding:.8rem;border-radius:6px;font-size:.82rem;overflow-x:auto}
 
 /* ── Badges ── */
 .badge-eligible{
-    background:var(--green);color:#fff;border-radius:20px;
+    background:var(--green);color:#fff !important;border-radius:20px;
     padding:3px 16px;font-size:.8rem;font-weight:600;
 }
 
 /* ── Clearance notice ── */
 .notice{
-    background:linear-gradient(90deg,var(--green),var(--green-mid));color:#fff;
+    background:linear-gradient(90deg,var(--green),var(--green-mid));color:#fff !important;
     border-radius:10px;padding:1rem 1.4rem;text-align:center;
     font-weight:600;font-size:1rem;margin-top:.5rem;margin-bottom:1.5rem;letter-spacing:.3px;
 }
 
 /* ── Buttons ── */
-.stButton>button{
-    background:var(--green);color:#fff;border-radius:8px;border:none;
-    padding:.5rem 2rem;font-weight:600;font-size:1rem;width:100%;
-    transition:background .18s;
+.stButton > button {
+    background: var(--green) !important;
+    color: #fff !important;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 1rem;
+    width: 100%;
+    transition: background .18s;
 }
-.stButton>button:hover{background:var(--green-mid)}
+.stButton > button:hover { background: var(--green-mid) !important; }
 
-/* ── Footer ── */
-.ftr{text-align:center;color:var(--text-faint);font-size:.8rem;margin-top:2.5rem}
-
-/* ── Streamlit overrides ── */
-/* Force light top chrome when in light mode (base config is dark) */
-header[data-testid="stHeader"],
-div[data-testid="stHeader"],
-div[data-testid="stToolbar"],
-div[data-testid="stDecoration"],
-.st-emotion-cache-zq5wmm,
-.st-emotion-cache-1avcm0n,
-.st-emotion-cache-18ni7ap {
-    background-color: var(--bg) !important;
-    border-bottom: 1px solid var(--border) !important;
-}
-div[data-testid="stToolbar"] button,
-div[data-testid="stToolbar"] svg {
-    color: var(--text-muted) !important;
-    fill: var(--text-muted) !important;
-}
-html, body, .stApp, section.main > div {
-    background-color: var(--bg) !important;
-    color: var(--text) !important;
-}
-.stTextInput>div>div>input,
-.stSelectbox>div>div{
-    background:var(--bg) !important;
-    color:var(--text) !important;
-    border-color:var(--border) !important;
-}
-.stDataFrame{background:var(--bg) !important}
-div[data-testid="stMetricValue"]{color:var(--green) !important}
+/* ── Download button ── */
 [data-testid="stDownloadButton"] button {
     background: var(--green) !important;
     color: #ffffff !important;
 }
+
+/* ── Footer ── */
+.ftr{text-align:center;color:var(--text-faint);font-size:.8rem;margin-top:2.5rem}
 </style>
 """
 
