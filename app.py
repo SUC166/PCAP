@@ -475,38 +475,41 @@ with nav_mid:
             st.rerun()
 
 with nav_r:
-    # Right side: theme toggle + logout side by side
-    right_cols = st.columns([1, 1]) if st.session_state.admin_logged_in else [st, None]
-    
-    # Theme toggle button — styled to look like a pill toggle
-    icon = "☀️" if is_dark else "🌙"
+    icon  = "☀️" if is_dark else "🌙"
     label = "Light" if is_dark else "Dark"
-    with right_cols[0]:
-        if st.button(f"{icon} {label}", use_container_width=True, key="theme_toggle_btn",
-                     help="Switch theme"):
-            new_theme = "light" if is_dark else "dark"
-            st.session_state.theme = new_theme
-            # Save to GitHub if logged in
-            if st.session_state.admin_logged_in:
+
+    if st.session_state.admin_logged_in:
+        # Two buttons side by side: theme toggle + logout
+        tc, lc = st.columns(2)
+        with tc:
+            if st.button(f"{icon} {label}", use_container_width=True,
+                         key="theme_toggle_btn", help="Switch theme"):
+                new_theme = "light" if is_dark else "dark"
+                st.session_state.theme = new_theme
                 try:
                     from github_store import save_admin_theme
                     save_admin_theme(st.session_state.admin_user["username"], new_theme)
                 except Exception:
                     pass
-            st.rerun()
-    
-    if st.session_state.admin_logged_in and right_cols[1] is not None:
-        with right_cols[1]:
+                st.rerun()
+        with lc:
             if st.button("Logout", use_container_width=True, key="logout_btn"):
                 try:
                     from github_store import append_log
-                    append_log(st.session_state.admin_user["username"], "LOGOUT", "Admin logged out")
+                    append_log(st.session_state.admin_user["username"],
+                               "LOGOUT", "Admin logged out")
                 except Exception:
                     pass
                 st.session_state.admin_logged_in = False
                 st.session_state.admin_user = None
                 st.session_state.view = "student"
                 st.rerun()
+    else:
+        # Just the theme toggle when not logged in
+        if st.button(f"{icon} {label}", use_container_width=True,
+                     key="theme_toggle_btn", help="Switch theme"):
+            st.session_state.theme = "light" if is_dark else "dark"
+            st.rerun()
 st.divider()
 
 
