@@ -360,10 +360,11 @@ def admin_panel_view():
             c3.metric("Pending", len(df) - len(eligible))
             st.divider()
 
-        # ── Search bar ─────────────────────────────────────────────────────
+        # ── Search ─────────────────────────────────────────────────────────
         st.markdown("##### \U0001F50D Search Students")
+        st.caption("Search to find a student's S/N, then use it in the Edit or Delete sections below.")
         srch = st.text_input("Search by name, matric, JAMB reg, department, or S/N",
-                              key="admin_search", placeholder="Type anything...")
+                              key="admin_search", placeholder="e.g. Okafor or 20251515463")
 
         if df is not None and not df.empty and srch.strip():
             t = srch.strip().lower()
@@ -375,13 +376,56 @@ def admin_panel_view():
             if found.empty:
                 st.warning("No students match your search.")
             else:
-                st.caption(f"{len(found)} result(s) found")
-                _render_student_table(found)
-        elif df is not None and not df.empty:
-            st.caption(f"Showing all {len(df)} records")
-            _render_student_table(df)
+                st.caption(f"{len(found)} result(s) — note the S/N to edit or delete")
+                _render_search_results(found)
+        elif df is not None and not df.empty and not srch.strip():
+            st.info(f"\U0001F4CB {len(df)} students loaded. Use the search box above to find a student.")
         else:
             st.info("No student records loaded yet. Add a student below or import a CSV.")
+
+        st.divider()
+
+        # ── Edit by S/N ────────────────────────────────────────────────────
+        st.markdown("##### ✏️ Edit Student by S/N")
+        sn_edit_input = st.number_input("Enter S/N to edit", min_value=1, step=1,
+                                         value=None, placeholder="e.g. 42",
+                                         key="sn_edit_input")
+        if st.button("Load Student for Editing", use_container_width=True, key="load_edit_btn"):
+            if sn_edit_input is None:
+                st.warning("Please enter an S/N number.")
+            elif df is None or df.empty:
+                st.warning("No student records loaded.")
+            elif int(sn_edit_input) not in df["SN"].values:
+                st.error(f"S/N {int(sn_edit_input)} not found.")
+            else:
+                st.session_state.edit_sn = int(sn_edit_input)
+                st.session_state.confirm_del = None
+                st.rerun()
+
+        # ── Edit form (shown when edit_sn is set) ──────────────────────────
+        _render_edit_form()
+
+        st.divider()
+
+        # ── Delete by S/N ──────────────────────────────────────────────────
+        st.markdown("##### 🗑️ Delete Student by S/N")
+        sn_del_input = st.number_input("Enter S/N to delete", min_value=1, step=1,
+                                        value=None, placeholder="e.g. 42",
+                                        key="sn_del_input")
+        if st.button("Delete Student", use_container_width=True, key="load_del_btn"):
+            if sn_del_input is None:
+                st.warning("Please enter an S/N number.")
+            elif df is None or df.empty:
+                st.warning("No student records loaded.")
+            elif int(sn_del_input) not in df["SN"].values:
+                st.error(f"S/N {int(sn_del_input)} not found.")
+            else:
+                st.session_state.confirm_del = int(sn_del_input)
+                st.session_state.edit_sn = None
+                st.rerun()
+
+        # ── Delete confirmation (shown when confirm_del is set) ────────────
+        _render_delete_confirm()
 
         st.divider()
 
@@ -611,149 +655,178 @@ def admin_panel_view():
                     st.error(f"GitHub error: {e}")
 
 
-# ── Student table renderer (with Edit / Delete inline) ─────────────────────────
-def _render_student_table(df: pd.DataFrame):
-    """Render a table of students with per-row Edit and Delete buttons."""
-    # Header row
-    h0,h1,h2,h3,h4,h5,h6,h7,h8,h9 = st.columns([0.6,2.2,1.3,1.4,2,0.7,0.7,0.7,0.7,0.7])
-    h0.markdown("**S/N**"); h1.markdown("**Name**"); h2.markdown("**Matric**")
-    h3.markdown("**JAMB**"); h4.markdown("**Dept**"); h5.markdown("**O'Lvl**")
-    h6.markdown("**Fees**"); h7.markdown("**JAMB✓**"); h8.markdown("**Edit**")
-    h9.markdown("**Del**")
-    st.markdown("<hr style='margin:.2rem 0'>", unsafe_allow_html=True)
-
-    for idx, row in df.iterrows():
+# ── Search results display (clean table, no buttons) ──────────────────────────
+def _render_search_results(df: pd.DataFrame):
+    """Display search results as a clean read-only styled table."""
+    for _, row in df.iterrows():
         sn   = int(row["SN"])
         olvl = row["Olevel"] is True
         fees = row["School_Fees"] is True
         jamb = row["Jamb"] is True
+        valid = olvl and fees and jamb
+        border_color = "#006633" if valid else "#cc0000"
+        status_badge = (
+            "<span style='background:#006633;color:#fff;border-radius:12px;"
+            "padding:2px 10px;font-size:.75rem;font-weight:600'>ELIGIBLE</span>"
+            if valid else
+            "<span style='background:#cc0000;color:#fff;border-radius:12px;"
+            "padding:2px 10px;font-size:.75rem;font-weight:600'>PENDING</span>"
+        )
+        st.markdown(
+            f"<div style='border-left:4px solid {border_color};background:#fafafa;"
+            f"border-radius:8px;padding:.7rem 1rem;margin-bottom:.5rem'>"
+            f"<div style='display:flex;justify-content:space-between;align-items:center'>"
+            f"<span style='font-weight:700;font-size:1rem'>{row['Name']}</span>"
+            f"<span style='display:flex;gap:.5rem;align-items:center'>"
+            f"<span style='background:#e8f5e9;color:#006633;border-radius:12px;"
+            f"padding:2px 10px;font-size:.8rem;font-weight:700'>S/N {sn}</span>"
+            f"{status_badge}</span></div>"
+            f"<div style='margin-top:.4rem;font-size:.85rem;color:#555;display:flex;flex-wrap:wrap;gap:.8rem'>"
+            f"<span>\U0001F393 {row['Department']}</span>"
+            f"<span>\U0001F194 {row['Matric_Number']}</span>"
+            f"<span>\U0001F4DD {row['Jamb_Reg']}</span>"
+            f"<span>O'Level {'✅' if olvl else '❌'}</span>"
+            f"<span>Fees {'✅' if fees else '❌'}</span>"
+            f"<span>JAMB {'✅' if jamb else '❌'}</span>"
+            f"</div></div>",
+            unsafe_allow_html=True,
+        )
 
-        c0,c1,c2,c3,c4,c5,c6,c7,c8,c9 = st.columns([0.6,2.2,1.3,1.4,2,0.7,0.7,0.7,0.7,0.7])
-        c0.write(sn)
-        c1.write(str(row["Name"]))
-        c2.write(str(row["Matric_Number"]))
-        c3.write(str(row["Jamb_Reg"]))
-        c4.write(str(row["Department"]))
-        c5.write("✅" if olvl else "❌")
-        c6.write("✅" if fees else "❌")
-        c7.write("✅" if jamb else "❌")
 
-        if c8.button("✏️", key=f"edit_{sn}_{idx}", help=f"Edit S/N {sn}"):
-            st.session_state.edit_sn = sn
+# ── Edit form (triggered by S/N input) ────────────────────────────────────────
+def _render_edit_form():
+    edit_sn = st.session_state.get("edit_sn")
+    if edit_sn is None:
+        return
+
+    full_df = st.session_state.csv_df
+    if full_df is None or full_df.empty:
+        st.session_state.edit_sn = None
+        return
+
+    row_mask = full_df["SN"] == edit_sn
+    if row_mask.sum() == 0:
+        st.error(f"S/N {edit_sn} not found in records.")
+        st.session_state.edit_sn = None
+        return
+
+    row = full_df[row_mask].iloc[0]
+    name_parts = str(row["Name"]).split(" ", 2)
+    e_surname = name_parts[0] if len(name_parts) > 0 else ""
+    e_first   = name_parts[1] if len(name_parts) > 1 else ""
+    e_middle  = name_parts[2] if len(name_parts) > 2 else ""
+
+    st.markdown(
+        f"<div style='background:#fffbe6;border-left:4px solid #f0a500;border-radius:8px;"
+        f"padding:.7rem 1rem;margin:.5rem 0'>"
+        f"<strong>✏️ Editing S/N {edit_sn} — {row['Name']}</strong></div>",
+        unsafe_allow_html=True,
+    )
+
+    with st.form(f"edit_form_{edit_sn}"):
+        ec1, ec2, ec3 = st.columns(3)
+        with ec1: e_sur = st.text_input("Surname *", value=e_surname)
+        with ec2: e_fst = st.text_input("First Name *", value=e_first)
+        with ec3: e_mid = st.text_input("Middle Name", value=e_middle)
+
+        ea1, ea2 = st.columns(2)
+        with ea1:
+            e_mat = st.text_input("Matric Number *", value=str(row["Matric_Number"]))
+        with ea2:
+            e_jmb = st.text_input("JAMB Reg *", value=str(row["Jamb_Reg"]))
+
+        dept_idx = DEPARTMENTS.index(row["Department"]) if row["Department"] in DEPARTMENTS else 0
+        e_dept = st.selectbox("Department *", DEPARTMENTS, index=dept_idx)
+
+        eb1, eb2, eb3 = st.columns(3)
+        with eb1:
+            e_olvl = st.selectbox("O'Level Verified", ["True","False"],
+                                  index=0 if row["Olevel"] is True else 1)
+        with eb2:
+            e_fees = st.selectbox("School Fees Paid", ["True","False"],
+                                  index=0 if row["School_Fees"] is True else 1)
+        with eb3:
+            e_jamb = st.selectbox("JAMB Confirmed", ["True","False"],
+                                  index=0 if row["Jamb"] is True else 1)
+
+        save_col, cancel_col = st.columns(2)
+        with save_col:
+            save_btn = st.form_submit_button("💾 Save Changes", use_container_width=True)
+        with cancel_col:
+            cancel_btn = st.form_submit_button("✖ Cancel", use_container_width=True)
+
+    if cancel_btn:
+        st.session_state.edit_sn = None
+        st.rerun()
+
+    if save_btn:
+        errs = []
+        if not e_sur.strip(): errs.append("Surname is required.")
+        if not e_fst.strip(): errs.append("First name is required.")
+        if not re.match(r"^\d{11}$", e_mat.strip()):
+            errs.append("Matric Number must be exactly 11 digits.")
+        if not re.match(r"^\d{12}[A-Za-z]{2}$", e_jmb.strip()):
+            errs.append("JAMB Reg must be 12 digits + 2 letters.")
+        others = full_df[full_df["SN"] != edit_sn]
+        if e_mat.strip() in others["Matric_Number"].astype(str).values:
+            errs.append(f"Matric Number {e_mat.strip()} belongs to another student.")
+        if e_jmb.strip().upper() in others["Jamb_Reg"].astype(str).str.upper().values:
+            errs.append(f"JAMB Reg {e_jmb.strip()} belongs to another student.")
+
+        if errs:
+            for e in errs: st.error(e)
+        else:
+            parts = [e_sur.strip(), e_fst.strip()]
+            if e_mid.strip(): parts.append(e_mid.strip())
+            full_df.loc[row_mask, "Name"]          = " ".join(parts)
+            full_df.loc[row_mask, "Matric_Number"] = e_mat.strip()
+            full_df.loc[row_mask, "Jamb_Reg"]      = e_jmb.strip().upper()
+            full_df.loc[row_mask, "Department"]    = e_dept
+            full_df.loc[row_mask, "Olevel"]        = e_olvl == "True"
+            full_df.loc[row_mask, "School_Fees"]   = e_fees == "True"
+            full_df.loc[row_mask, "Jamb"]          = e_jamb == "True"
+            st.session_state.csv_df = full_df
+            st.session_state.edit_sn = None
+            st.success(f"✅ S/N {edit_sn} — {' '.join(parts)} updated successfully.")
+            st.rerun()
+
+
+# ── Delete confirmation ────────────────────────────────────────────────────────
+def _render_delete_confirm():
+    del_sn = st.session_state.get("confirm_del")
+    if del_sn is None:
+        return
+
+    full_df = st.session_state.csv_df
+    if full_df is None or full_df.empty:
+        st.session_state.confirm_del = None
+        return
+
+    row_mask = full_df["SN"] == del_sn
+    if row_mask.sum() == 0:
+        st.error(f"S/N {del_sn} not found.")
+        st.session_state.confirm_del = None
+        return
+
+    del_name = full_df[row_mask].iloc[0]["Name"]
+    st.markdown(
+        f"<div style='background:#fff5f5;border-left:4px solid #cc0000;border-radius:8px;"
+        f"padding:.7rem 1rem;margin:.5rem 0'>"
+        f"⚠️ <strong>Confirm deletion of S/N {del_sn} — {del_name}?</strong><br>"
+        f"<span style='font-size:.85rem;color:#666'>This action cannot be undone.</span></div>",
+        unsafe_allow_html=True,
+    )
+    dc1, dc2 = st.columns(2)
+    with dc1:
+        if st.button("🗑️ Yes, Delete", key=f"confirm_del_yes_{del_sn}", use_container_width=True):
+            st.session_state.csv_df = full_df[~row_mask].reset_index(drop=True)
+            st.session_state.confirm_del = None
+            st.success(f"🗑️ {del_name} (S/N {del_sn}) has been removed.")
+            st.rerun()
+    with dc2:
+        if st.button("✖ Cancel", key=f"confirm_del_no_{del_sn}", use_container_width=True):
             st.session_state.confirm_del = None
             st.rerun()
-
-        if c9.button("🗑️", key=f"del_{sn}_{idx}", help=f"Delete S/N {sn}"):
-            st.session_state.confirm_del = sn
-            st.session_state.edit_sn = None
-            st.rerun()
-
-    # ── Edit form ──────────────────────────────────────────────────────────
-    edit_sn = st.session_state.get("edit_sn")
-    if edit_sn is not None:
-        full_df = st.session_state.csv_df
-        row_mask = full_df["SN"] == edit_sn
-        if row_mask.sum() == 0:
-            st.session_state.edit_sn = None
-        else:
-            row = full_df[row_mask].iloc[0]
-            name_parts = str(row["Name"]).split(" ", 2)
-            e_surname = name_parts[0] if len(name_parts) > 0 else ""
-            e_first   = name_parts[1] if len(name_parts) > 1 else ""
-            e_middle  = name_parts[2] if len(name_parts) > 2 else ""
-
-            st.markdown(f"---\n##### ✏️ Editing S/N {edit_sn} — {row['Name']}")
-            with st.form(f"edit_form_{edit_sn}"):
-                ec1, ec2, ec3 = st.columns(3)
-                with ec1: e_sur = st.text_input("Surname *", value=e_surname)
-                with ec2: e_fst = st.text_input("First Name *", value=e_first)
-                with ec3: e_mid = st.text_input("Middle Name", value=e_middle)
-
-                ea1, ea2 = st.columns(2)
-                with ea1:
-                    e_mat = st.text_input("Matric Number *", value=str(row["Matric_Number"]))
-                with ea2:
-                    e_jmb = st.text_input("JAMB Reg *", value=str(row["Jamb_Reg"]))
-
-                dept_idx = DEPARTMENTS.index(row["Department"]) if row["Department"] in DEPARTMENTS else 0
-                e_dept = st.selectbox("Department *", DEPARTMENTS, index=dept_idx)
-
-                eb1, eb2, eb3 = st.columns(3)
-                with eb1:
-                    e_olvl = st.selectbox("O'Level Verified", ["True","False"],
-                                          index=0 if row["Olevel"] is True else 1)
-                with eb2:
-                    e_fees = st.selectbox("School Fees Paid", ["True","False"],
-                                          index=0 if row["School_Fees"] is True else 1)
-                with eb3:
-                    e_jamb = st.selectbox("JAMB Confirmed", ["True","False"],
-                                          index=0 if row["Jamb"] is True else 1)
-
-                save_col, cancel_col = st.columns(2)
-                with save_col:
-                    save_btn = st.form_submit_button("💾 Save Changes", use_container_width=True)
-                with cancel_col:
-                    cancel_btn = st.form_submit_button("✖ Cancel", use_container_width=True)
-
-            if cancel_btn:
-                st.session_state.edit_sn = None
-                st.rerun()
-
-            if save_btn:
-                errs = []
-                if not e_sur.strip(): errs.append("Surname is required.")
-                if not e_fst.strip(): errs.append("First name is required.")
-                if not re.match(r"^\d{11}$", e_mat.strip()):
-                    errs.append("Matric Number must be exactly 11 digits.")
-                if not re.match(r"^\d{12}[A-Za-z]{2}$", e_jmb.strip()):
-                    errs.append("JAMB Reg must be 12 digits + 2 letters.")
-                # Duplicate check (excluding current row)
-                others = full_df[full_df["SN"] != edit_sn]
-                if e_mat.strip() in others["Matric_Number"].astype(str).values:
-                    errs.append(f"Matric Number {e_mat.strip()} belongs to another student.")
-                if e_jmb.strip().upper() in others["Jamb_Reg"].astype(str).str.upper().values:
-                    errs.append(f"JAMB Reg {e_jmb.strip()} belongs to another student.")
-
-                if errs:
-                    for e in errs: st.error(e)
-                else:
-                    parts = [e_sur.strip(), e_fst.strip()]
-                    if e_mid.strip(): parts.append(e_mid.strip())
-                    full_df.loc[row_mask, "Name"]         = " ".join(parts)
-                    full_df.loc[row_mask, "Matric_Number"]= e_mat.strip()
-                    full_df.loc[row_mask, "Jamb_Reg"]     = e_jmb.strip().upper()
-                    full_df.loc[row_mask, "Department"]   = e_dept
-                    full_df.loc[row_mask, "Olevel"]       = e_olvl == "True"
-                    full_df.loc[row_mask, "School_Fees"]  = e_fees == "True"
-                    full_df.loc[row_mask, "Jamb"]         = e_jamb == "True"
-                    st.session_state.csv_df = full_df
-                    st.session_state.edit_sn = None
-                    st.success(f"✅ S/N {edit_sn} updated successfully.")
-                    st.rerun()
-
-    # ── Delete confirmation ────────────────────────────────────────────────
-    del_sn = st.session_state.get("confirm_del")
-    if del_sn is not None:
-        full_df = st.session_state.csv_df
-        row_mask = full_df["SN"] == del_sn
-        if row_mask.sum() > 0:
-            del_name = full_df[row_mask].iloc[0]["Name"]
-            st.markdown(f"---")
-            st.warning(
-                f"⚠️ Are you sure you want to delete **{del_name}** (S/N {del_sn})? "
-                f"This cannot be undone."
-            )
-            dc1, dc2 = st.columns(2)
-            with dc1:
-                if st.button("🗑️ Yes, Delete", key=f"confirm_del_yes_{del_sn}", use_container_width=True):
-                    st.session_state.csv_df = full_df[~row_mask].reset_index(drop=True)
-                    st.session_state.confirm_del = None
-                    st.success(f"🗑️ {del_name} (S/N {del_sn}) has been removed.")
-                    st.rerun()
-            with dc2:
-                if st.button("✖ Cancel", key=f"confirm_del_no_{del_sn}", use_container_width=True):
-                    st.session_state.confirm_del = None
-                    st.rerun()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -774,6 +847,6 @@ elif view == "admin_panel":
 
 st.markdown(
     "<div class='ftr'>FUTO Physical Clearance Assistance Platform (PCAP) "
-    "&copy; 2025 &nbsp;|&nbsp; Federal University of Technology Owerri</div>",
+    "&copy; 2026 &nbsp;|&nbsp; Federal University of Technology Owerri</div>",
     unsafe_allow_html=True,
 )
