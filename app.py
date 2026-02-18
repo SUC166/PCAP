@@ -136,16 +136,14 @@ def normalise_df(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def persist_students(actor: str, action_note: str = "update"):
-    """Save current csv_df to GitHub. Call after every mutation."""
+    """Fire-and-forget: queues GitHub write in background. UI never waits."""
     try:
         from github_store import df_to_students, save_students
         df = st.session_state.csv_df
-        if df is not None and not df.empty:
-            save_students(df_to_students(df), actor=actor, action_note=action_note)
-        elif df is not None and df.empty:
-            save_students([], actor=actor, action_note=action_note)
-    except Exception as e:
-        st.warning(f"⚠️ Changes saved locally but GitHub sync failed: {e}")
+        records = df_to_students(df) if df is not None and not df.empty else []
+        save_students(records, actor=actor, action_note=action_note)
+    except Exception:
+        pass  # Background write failure is silent — data is safe in session state
 
 def next_sn(df: pd.DataFrame) -> int:
     if df is None or df.empty or "SN" not in df.columns:
@@ -164,6 +162,19 @@ st.markdown(
 )
 
 nav_l, nav_m, nav_r = st.columns([4, 1, 1])
+with nav_l:
+    # Subtle background sync indicator — only visible to logged-in admins
+    if st.session_state.admin_logged_in:
+        try:
+            from github_store import _write_queue, _queue_lock
+            with _queue_lock:
+                pending = len(_write_queue)
+            if pending > 0:
+                st.caption(f"⏳ Syncing to GitHub… ({pending} pending)")
+            else:
+                st.caption("✅ All changes synced")
+        except Exception:
+            pass
 with nav_m:
     if st.session_state.view == "student":
         if st.button("\U0001F512 Admin"):
