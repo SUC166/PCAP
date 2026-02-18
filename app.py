@@ -104,11 +104,25 @@ for k, v in {
     "admin_user": None,
     "csv_df": None,
     "view": "student",
-    "edit_sn": None,       # SN of row being edited
-    "confirm_del": None,   # SN of row pending delete confirmation
+    "edit_sn": None,
+    "confirm_del": None,
+    "confirm_clear_all": False,
+    "students_loaded": False,   # have we fetched from GitHub yet this session?
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
+
+# ── Auto-load students from GitHub once per session ───────────────────────────
+if not st.session_state.students_loaded:
+    try:
+        from github_store import secrets_configured, load_students, students_to_df
+        if secrets_configured():
+            raw = load_students()
+            if raw:
+                st.session_state.csv_df = students_to_df(raw)
+            st.session_state.students_loaded = True
+    except Exception:
+        pass  # silently fail — app still works, admin can re-upload
 
 # ── Helper: ensure df has SN column and is clean ───────────────────────────────
 def normalise_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -120,6 +134,18 @@ def normalise_df(df: pd.DataFrame) -> pd.DataFrame:
             df[c] = df[c].astype(str).str.strip().str.lower().map(BOOL_MAP)
     df["SN"] = pd.to_numeric(df["SN"], errors="coerce").fillna(0).astype(int)
     return df
+
+def persist_students(actor: str, action_note: str = "update"):
+    """Save current csv_df to GitHub. Call after every mutation."""
+    try:
+        from github_store import df_to_students, save_students
+        df = st.session_state.csv_df
+        if df is not None and not df.empty:
+            save_students(df_to_students(df), actor=actor, action_note=action_note)
+        elif df is not None and df.empty:
+            save_students([], actor=actor, action_note=action_note)
+    except Exception as e:
+        st.warning(f"⚠️ Changes saved locally but GitHub sync failed: {e}")
 
 def next_sn(df: pd.DataFrame) -> int:
     if df is None or df.empty or "SN" not in df.columns:
@@ -150,6 +176,11 @@ with nav_m:
 with nav_r:
     if st.session_state.admin_logged_in:
         if st.button("Logout"):
+            try:
+                from github_store import append_log
+                append_log(st.session_state.admin_user["username"], "LOGOUT", "Admin logged out")
+            except Exception:
+                pass
             st.session_state.admin_logged_in = False
             st.session_state.admin_user = None
             st.session_state.view = "student"
@@ -302,6 +333,11 @@ def admin_login_view():
         st.session_state.admin_logged_in = True
         st.session_state.admin_user = {"username": "pcap_bootstrap", "phone": ""}
         st.session_state.view = "admin_panel"
+        try:
+            from github_store import append_log
+            append_log("pcap_bootstrap", "LOGIN", "Bootstrap admin login")
+        except Exception:
+            pass
         st.rerun()
         return
 
@@ -315,8 +351,18 @@ def admin_login_view():
         st.session_state.admin_logged_in = True
         st.session_state.admin_user = admin
         st.session_state.view = "admin_panel"
+        try:
+            from github_store import append_log
+            append_log(admin["username"], "LOGIN", f"Admin login successful")
+        except Exception:
+            pass
         st.rerun()
     else:
+        try:
+            from github_store import append_log
+            append_log(uname.strip(), "LOGIN_FAILED", "Invalid username or password")
+        except Exception:
+            pass
         st.error("Invalid username or password.")
 
 
@@ -338,11 +384,12 @@ def admin_panel_view():
         unsafe_allow_html=True,
     )
 
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "\U0001F4CB Student Records",
         "\U0001F4C2 Import CSV",
         "\U0001F468\u200D\U0001F4BB Manage Admins",
         "\U0001F510 My Account",
+        "\U0001F4DC Audit Logs",
     ])
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -468,14 +515,11 @@ def admin_panel_view():
                 errs.append("Matric Number must be exactly 11 digits.")
             if not re.match(r"^\d{12}[A-Za-z]{2}$", a_jamb.strip()):
                 errs.append("JAMB Reg must be 12 digits followed by 2 letters.")
-
-            # Check duplicates
             if df is not None and not df.empty:
                 if a_matric.strip() in df["Matric_Number"].astype(str).values:
                     errs.append(f"Matric Number {a_matric.strip()} already exists.")
                 if a_jamb.strip().upper() in df["Jamb_Reg"].astype(str).str.upper().values:
                     errs.append(f"JAMB Reg {a_jamb.strip()} already exists.")
-
             if errs:
                 for e in errs:
                     st.error(e)
@@ -486,8 +530,7 @@ def admin_panel_view():
                 full_name = " ".join(parts)
                 new_sn = next_sn(df)
                 new_row = {
-                    "SN": new_sn,
-                    "Name": full_name,
+                    "SN": new_sn, "Name": full_name,
                     "Matric_Number": a_matric.strip(),
                     "Jamb_Reg": a_jamb.strip().upper(),
                     "Department": a_dept,
@@ -501,20 +544,62 @@ def admin_panel_view():
                     st.session_state.csv_df = pd.concat(
                         [df, pd.DataFrame([new_row])], ignore_index=True
                     )
+                persist_students(admin["username"], f"add SN {new_sn}")
+                try:
+                    from github_store import append_log
+                    append_log(admin["username"], "ADD_STUDENT",
+                               f"Name: {full_name} | Matric: {a_matric.strip()} | "
+                               f"JAMB: {a_jamb.strip().upper()} | Dept: {a_dept} | S/N: {new_sn}")
+                except Exception:
+                    pass
                 st.success(f"\u2705 {full_name} added with S/N {new_sn}.")
                 st.rerun()
 
-        # ── Download button ────────────────────────────────────────────────
+        # ── Download + Clear All ───────────────────────────────────────────
         if st.session_state.csv_df is not None and not st.session_state.csv_df.empty:
             st.divider()
-            csv_bytes = df_to_csv_bytes(st.session_state.csv_df)
-            st.download_button(
-                label="\U0001F4E5 Download Current CSV",
-                data=csv_bytes,
-                file_name="pcap_students.csv",
-                mime="text/csv",
-                use_container_width=True,
-            )
+            dl_col, clr_col = st.columns(2)
+            with dl_col:
+                st.download_button(
+                    label="\U0001F4E5 Download CSV",
+                    data=df_to_csv_bytes(st.session_state.csv_df),
+                    file_name="pcap_students.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
+            with clr_col:
+                if st.button("\U0001F5D1\uFE0F Delete ALL Records",
+                             use_container_width=True, key="clear_all_btn"):
+                    st.session_state.confirm_clear_all = True
+                    st.rerun()
+
+            if st.session_state.get("confirm_clear_all"):
+                st.markdown(
+                    "<div style='background:#fff0f0;border-left:4px solid #cc0000;"
+                    "border-radius:8px;padding:.8rem 1rem;margin:.5rem 0'>"
+                    "<strong>\u26A0\uFE0F DANGER: Delete ALL student records?</strong><br>"
+                    "<span style='font-size:.85rem;color:#666'>A backup will be automatically "
+                    "saved to GitHub before deletion.</span></div>",
+                    unsafe_allow_html=True,
+                )
+                ca1, ca2 = st.columns(2)
+                with ca1:
+                    if st.button("\U0001F5D1\uFE0F Yes, Delete Everything",
+                                 key="confirm_clear_yes", use_container_width=True):
+                        try:
+                            from github_store import clear_all_students
+                            backup_file = clear_all_students(admin["username"])
+                            st.session_state.csv_df = None
+                            st.session_state.confirm_clear_all = False
+                            st.success(f"\u2705 All records deleted. Backup: `{backup_file}`")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error during clear: {e}")
+                with ca2:
+                    if st.button("\u2716 Cancel", key="confirm_clear_no",
+                                 use_container_width=True):
+                        st.session_state.confirm_clear_all = False
+                        st.rerun()
 
     # ══════════════════════════════════════════════════════════════════════════
     # TAB 2 — IMPORT CSV
@@ -548,6 +633,13 @@ def admin_panel_view():
                         st.warning(f"\u26A0\uFE0F {len(bad_j)} invalid JAMB Reg(s): {bad_j['Name'].tolist()}")
                     clean = normalise_df(raw)
                     st.session_state.csv_df = clean
+                    persist_students(admin["username"], f"import CSV {len(clean)} records")
+                    try:
+                        from github_store import append_log
+                        append_log(admin["username"], "IMPORT_CSV",
+                                   f"Imported {len(clean)} student records via CSV upload")
+                    except Exception:
+                        pass
                     eligible_n = len(clean[(clean["Olevel"]==True)&(clean["School_Fees"]==True)&(clean["Jamb"]==True)])
                     st.success(f"\u2705 Imported {len(clean)} records — {eligible_n} eligible.")
                     st.dataframe(clean, use_container_width=True)
@@ -655,7 +747,79 @@ def admin_panel_view():
                     st.error(f"GitHub error: {e}")
 
 
-# ── Search results display (clean table, no buttons) ──────────────────────────
+    # ══════════════════════════════════════════════════════════════════════════
+    # TAB 5 — AUDIT LOGS
+    # ══════════════════════════════════════════════════════════════════════════
+    with tab5:
+        st.markdown("##### \U0001F4DC Admin Audit Log")
+        st.caption("Every admin action is recorded here. Newest entries shown first.")
+
+        # Action filter
+        ACTION_TYPES = [
+            "ALL", "LOGIN", "LOGIN_FAILED", "LOGOUT",
+            "ADD_STUDENT", "EDIT_STUDENT", "DELETE_STUDENT",
+            "IMPORT_CSV", "CLEAR_ALL_STUDENTS", "BACKUP_CREATED",
+            "CREATE_ADMIN", "UPDATE_OWN_CREDENTIALS",
+        ]
+        log_col1, log_col2 = st.columns([2, 1])
+        with log_col1:
+            actor_filter = st.text_input("Filter by admin username", placeholder="Leave blank for all")
+        with log_col2:
+            action_filter = st.selectbox("Filter by action", ACTION_TYPES)
+
+        try:
+            from github_store import load_logs
+            all_logs = load_logs()
+        except Exception as e:
+            st.error(f"Could not load logs: {e}")
+            all_logs = []
+
+        if all_logs:
+            filtered = all_logs
+            if actor_filter.strip():
+                filtered = [l for l in filtered if actor_filter.strip().lower() in l.get("actor","").lower()]
+            if action_filter != "ALL":
+                filtered = [l for l in filtered if l.get("action","") == action_filter]
+
+            st.caption(f"Showing {len(filtered)} of {len(all_logs)} total log entries")
+
+            # Colour map for action types
+            ACTION_COLORS = {
+                "LOGIN": "#006633", "LOGOUT": "#555555",
+                "LOGIN_FAILED": "#cc0000",
+                "ADD_STUDENT": "#0055cc", "EDIT_STUDENT": "#ff8800",
+                "DELETE_STUDENT": "#cc0000", "CLEAR_ALL_STUDENTS": "#990000",
+                "IMPORT_CSV": "#0055cc", "BACKUP_CREATED": "#006633",
+                "CREATE_ADMIN": "#6600cc", "UPDATE_OWN_CREDENTIALS": "#cc6600",
+            }
+
+            for entry in filtered:
+                action = entry.get("action", "")
+                color  = ACTION_COLORS.get(action, "#333")
+                st.markdown(
+                    f"<div style='border-left:3px solid {color};background:#fafafa;"
+                    f"border-radius:6px;padding:.5rem .9rem;margin-bottom:.35rem;font-size:.87rem'>"
+                    f"<div style='display:flex;justify-content:space-between;flex-wrap:wrap;gap:.3rem'>"
+                    f"<span><strong style='color:{color}'>{action}</strong> &nbsp;&mdash;&nbsp; "
+                    f"<strong>{entry.get('actor','?')}</strong></span>"
+                    f"<span style='color:#888;font-size:.8rem'>{entry.get('timestamp','')}</span>"
+                    f"</div>"
+                    f"<div style='color:#555;margin-top:.2rem'>{entry.get('detail','')}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+
+            # Download logs as CSV
+            import io as _io
+            log_df = pd.DataFrame(filtered)
+            log_csv = log_df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "\U0001F4E5 Download Log as CSV", log_csv,
+                file_name="pcap_audit_log.csv", mime="text/csv",
+                use_container_width=True,
+            )
+        else:
+            st.info("No log entries yet.")
 def _render_search_results(df: pd.DataFrame):
     """Display search results as a clean read-only styled table."""
     for _, row in df.iterrows():
@@ -786,8 +950,18 @@ def _render_edit_form():
             full_df.loc[row_mask, "School_Fees"]   = e_fees == "True"
             full_df.loc[row_mask, "Jamb"]          = e_jamb == "True"
             st.session_state.csv_df = full_df
+            actor = st.session_state.admin_user["username"]
+            persist_students(actor, f"edit SN {edit_sn}")
+            try:
+                from github_store import append_log
+                append_log(actor, "EDIT_STUDENT",
+                           f"S/N {edit_sn} | Name: {' '.join(parts)} | "
+                           f"Matric: {e_mat.strip()} | JAMB: {e_jmb.strip().upper()} | "
+                           f"Dept: {e_dept} | O'Level: {e_olvl} | Fees: {e_fees} | JAMB✓: {e_jamb}")
+            except Exception:
+                pass
             st.session_state.edit_sn = None
-            st.success(f"✅ S/N {edit_sn} — {' '.join(parts)} updated successfully.")
+            st.success(f"\u2705 S/N {edit_sn} — {' '.join(parts)} updated successfully.")
             st.rerun()
 
 
@@ -819,9 +993,20 @@ def _render_delete_confirm():
     dc1, dc2 = st.columns(2)
     with dc1:
         if st.button("🗑️ Yes, Delete", key=f"confirm_del_yes_{del_sn}", use_container_width=True):
+            actor = st.session_state.admin_user["username"]
+            del_row = full_df[row_mask].iloc[0]
             st.session_state.csv_df = full_df[~row_mask].reset_index(drop=True)
+            persist_students(actor, f"delete SN {del_sn}")
+            try:
+                from github_store import append_log
+                append_log(actor, "DELETE_STUDENT",
+                           f"S/N {del_sn} | Name: {del_row['Name']} | "
+                           f"Matric: {del_row['Matric_Number']} | JAMB: {del_row['Jamb_Reg']} | "
+                           f"Dept: {del_row['Department']}")
+            except Exception:
+                pass
             st.session_state.confirm_del = None
-            st.success(f"🗑️ {del_name} (S/N {del_sn}) has been removed.")
+            st.success(f"\U0001F5D1\uFE0F {del_name} (S/N {del_sn}) has been removed.")
             st.rerun()
     with dc2:
         if st.button("✖ Cancel", key=f"confirm_del_no_{del_sn}", use_container_width=True):
