@@ -1,0 +1,7 @@
+Name,Matric_Number,Jamb_Reg,Department,Olevel,School_Fees,Jamb
+John Adebayo,FUT/CS/2023/001,12345678AA,Computer Science,True,True,True
+Amaka Okonkwo,FUT/ME/2023/042,23456789BB,Mechanical Engineering,True,False,True
+Chukwuemeka Eze,FUT/EE/2023/015,34567890CC,Electrical Engineering,False,True,True
+Fatima Abubakar,FUT/CE/2023/088,45678901DD,Chemical Engineering,True,True,False
+Ngozi Obiora,FUT/AR/2023/033,56789012EE,Architecture,False,False,True
+Samuel Okafor,FUT/CS/2023/007,67890123FF,Computer Science,True,True,True
