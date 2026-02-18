@@ -111,6 +111,26 @@ html,body,[class*="css"]{
 .ftr{text-align:center;color:var(--text-faint);font-size:.8rem;margin-top:2.5rem}
 
 /* ── Streamlit overrides ── */
+/* Force light top chrome when in light mode (base config is dark) */
+header[data-testid="stHeader"],
+div[data-testid="stHeader"],
+div[data-testid="stToolbar"],
+div[data-testid="stDecoration"],
+.st-emotion-cache-zq5wmm,
+.st-emotion-cache-1avcm0n,
+.st-emotion-cache-18ni7ap {
+    background-color: var(--bg) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+div[data-testid="stToolbar"] button,
+div[data-testid="stToolbar"] svg {
+    color: var(--text-muted) !important;
+    fill: var(--text-muted) !important;
+}
+html, body, .stApp, section.main > div {
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+}
 .stTextInput>div>div>input,
 .stSelectbox>div>div{
     background:var(--bg) !important;
@@ -119,6 +139,10 @@ html,body,[class*="css"]{
 }
 .stDataFrame{background:var(--bg) !important}
 div[data-testid="stMetricValue"]{color:var(--green) !important}
+[data-testid="stDownloadButton"] button {
+    background: var(--green) !important;
+    color: #ffffff !important;
+}
 </style>
 """
 
@@ -135,43 +159,68 @@ DARK_CSS = """
     --surface-warn: #2a2310;
     --surface-info: #151a2a;
     --border:       #2a3830;
-    --text:         #e8f5ee;
-    --text-muted:   #a0b8a8;
-    --text-faint:   #607060;
+    --text:         #f0fff6;
+    --text-muted:   #c8ddd0;
+    --text-faint:   #7a9080;
     --green:        #00cc66;
     --green-mid:    #00aa55;
     --green-light:  #00ff80;
     --green-bg:     #0d2018;
-    --red:          #ff5555;
+    --red:          #ff6666;
     --red-bg:       #2a1010;
-    --amber:        #ffbb33;
+    --amber:        #ffcc44;
     --amber-bg:     #2a2010;
-    --blue:         #6688ff;
+    --blue:         #7799ff;
     --blue-bg:      #101828;
     --blue-code-bg: #1a2440;
     --card-shadow:  0 2px 12px rgba(0,0,0,.4);
     --hdr-shadow:   0 8px 32px rgba(0,0,0,.5);
 }
 
-html,body,[class*="css"]{
-    font-family:'Inter',sans-serif;
-    background-color:var(--bg) !important;
-    color:var(--text) !important;
+/* ── Force dark on EVERYTHING including Streamlit's own chrome ── */
+html, body, .stApp,
+[class*="css"],
+header[data-testid="stHeader"],
+div[data-testid="stHeader"],
+div[data-testid="stToolbar"],
+div[data-testid="stDecoration"],
+div[data-testid="stStatusWidget"],
+.st-emotion-cache-zq5wmm,
+.st-emotion-cache-1avcm0n,
+.st-emotion-cache-18ni7ap,
+.st-emotion-cache-uf99v8,
+section.main > div {
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+    font-family: 'Inter', sans-serif;
 }
 
-.stApp{background-color:var(--bg) !important}
-.stSidebar{background-color:var(--bg-secondary) !important}
-section[data-testid="stSidebar"]{background:var(--bg-secondary) !important}
+/* Streamlit's top header bar */
+header[data-testid="stHeader"] {
+    background: var(--bg) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+/* The deploy/menu toolbar icons */
+div[data-testid="stToolbar"] button,
+div[data-testid="stToolbar"] svg {
+    color: var(--text-muted) !important;
+    fill: var(--text-muted) !important;
+}
+
+/* Main content area and sidebar */
+.stApp { background-color: var(--bg) !important }
+section[data-testid="stSidebar"] { background: var(--bg-secondary) !important }
 
 /* ── Header ── */
 .hdr{
-    background:linear-gradient(135deg,#004422,#006633 60%,#009944);
+    background: linear-gradient(135deg,#003d1f,#005c2e 60%,#007a3d);
     border-radius:16px;padding:2rem 2.5rem;text-align:center;
     margin-bottom:1.5rem;box-shadow:var(--hdr-shadow);
     border:1px solid #005522;
 }
 .hdr h1{color:#ccffdd;font-size:2rem;font-weight:700;margin:0;letter-spacing:1px}
-.hdr p{color:#88ccaa;font-size:.95rem;margin:.4rem 0 0}
+.hdr p{color:#99ddbb;font-size:.95rem;margin:.4rem 0 0}
 
 /* ── Cards ── */
 .ok-card{
@@ -219,22 +268,26 @@ section[data-testid="stSidebar"]{background:var(--bg-secondary) !important}
     letter-spacing:.3px;border:1px solid #005522;
 }
 
-/* ── Buttons ── */
+/* ── Buttons — white text for legibility on green ── */
 .stButton>button{
-    background:var(--green);color:#001a0d;border-radius:8px;border:none;
+    background:var(--green);color:#ffffff !important;border-radius:8px;border:none;
     padding:.5rem 2rem;font-weight:700;font-size:1rem;width:100%;
     transition:background .18s;
 }
-.stButton>button:hover{background:var(--green-mid);color:#fff}
+.stButton>button:hover{background:var(--green-mid);color:#ffffff !important}
 
 /* ── Footer ── */
 .ftr{text-align:center;color:var(--text-faint);font-size:.8rem;margin-top:2.5rem}
 
-/* ── Streamlit overrides ── */
+/* ── Streamlit widget overrides ── */
 .stTextInput>div>div>input{
     background:var(--bg-secondary) !important;
     color:var(--text) !important;
     border-color:var(--border) !important;
+}
+.stTextInput label, .stSelectbox label, .stNumberInput label,
+.stTextArea label, .stFileUploader label {
+    color: var(--text) !important;
 }
 .stSelectbox>div>div{
     background:var(--bg-secondary) !important;
@@ -254,11 +307,21 @@ div[data-testid="stMetricLabel"]{color:var(--text-muted) !important}
 .stTabs [data-baseweb="tab-list"]{background:var(--bg-secondary) !important}
 .stTabs [data-baseweb="tab"]{color:var(--text-muted) !important}
 .stTabs [aria-selected="true"]{color:var(--green) !important}
-.stMarkdown p,.stMarkdown li{color:var(--text) !important}
-.stCaption{color:var(--text-faint) !important}
-label{color:var(--text) !important}
-.stAlert{background:var(--bg-secondary) !important}
+.stMarkdown, .stMarkdown p, .stMarkdown li,
+.stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+    color: var(--text) !important;
+}
+.stCaption, [data-testid="stCaptionContainer"] {color:var(--text-faint) !important}
+label, .stRadio label, .stCheckbox label {color:var(--text) !important}
+.stAlert{background:var(--bg-secondary) !important; color:var(--text) !important}
 hr{border-color:var(--border) !important}
+p, span, div { color: inherit }
+
+/* Download button — keep it readable */
+[data-testid="stDownloadButton"] button {
+    background: var(--green) !important;
+    color: #ffffff !important;
+}
 </style>
 """
 
