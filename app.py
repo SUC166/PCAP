@@ -11,61 +11,256 @@ st.set_page_config(
 )
 
 # ── CSS ────────────────────────────────────────────────────────────────────────
-st.markdown("""
+LIGHT_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-html,body,[class*="css"]{font-family:'Inter',sans-serif}
+
+/* ── Light theme variables ── */
+:root{
+    --bg:           #ffffff;
+    --bg-secondary: #f7f9f7;
+    --surface:      #f0faf4;
+    --surface-err:  #fff5f5;
+    --surface-warn: #fffbe6;
+    --surface-info: #f0f4ff;
+    --border:       #e0e0e0;
+    --text:         #1a1a1a;
+    --text-muted:   #555555;
+    --text-faint:   #999999;
+    --green:        #006633;
+    --green-mid:    #009933;
+    --green-light:  #00cc44;
+    --green-bg:     #f0faf4;
+    --red:          #cc0000;
+    --red-bg:       #fff5f5;
+    --amber:        #f0a500;
+    --amber-bg:     #fffbe6;
+    --blue:         #3355cc;
+    --blue-bg:      #f0f4ff;
+    --blue-code-bg: #dde4ff;
+    --card-shadow:  0 2px 8px rgba(0,102,51,.08);
+    --hdr-shadow:   0 8px 32px rgba(0,102,51,.18);
+}
+
+html,body,[class*="css"]{
+    font-family:'Inter',sans-serif;
+    background-color:var(--bg) !important;
+    color:var(--text) !important;
+}
+
+/* ── Header ── */
 .hdr{
-    background:linear-gradient(135deg,#006633,#009933 60%,#00cc44);
+    background:linear-gradient(135deg,var(--green),var(--green-mid) 60%,var(--green-light));
     border-radius:16px;padding:2rem 2.5rem;text-align:center;
-    margin-bottom:1.5rem;box-shadow:0 8px 32px rgba(0,102,51,.18)
+    margin-bottom:1.5rem;box-shadow:var(--hdr-shadow);
 }
 .hdr h1{color:#fff;font-size:2rem;font-weight:700;margin:0;letter-spacing:1px}
 .hdr p{color:#d4f5d4;font-size:.95rem;margin:.4rem 0 0}
+
+/* ── Cards ── */
 .ok-card{
-    background:#f0faf4;border-left:5px solid #006633;border-radius:10px;
-    padding:1.2rem 1.5rem;margin-bottom:.5rem;
-    box-shadow:0 2px 8px rgba(0,102,51,.08)
+    background:var(--green-bg);border-left:5px solid var(--green);
+    border-radius:10px;padding:1.2rem 1.5rem;margin-bottom:.5rem;
+    box-shadow:var(--card-shadow);
 }
-.ok-card h3{color:#006633;margin:0 0 .5rem;font-size:1.1rem}
-.ok-card p{margin:.2rem 0;color:#333;font-size:.92rem}
-.badge-eligible{
-    background:#006633;color:#fff;border-radius:20px;
-    padding:3px 16px;font-size:.8rem;font-weight:600
-}
+.ok-card h3{color:var(--green);margin:0 0 .5rem;font-size:1.1rem}
+.ok-card p{margin:.2rem 0;color:var(--text-muted);font-size:.92rem}
+
 .err-card{
-    background:#fff5f5;border-left:5px solid #c00;border-radius:10px;
-    padding:1.2rem 1.5rem;margin-bottom:.5rem
+    background:var(--red-bg);border-left:5px solid var(--red);
+    border-radius:10px;padding:1.2rem 1.5rem;margin-bottom:.5rem;
 }
-.err-card h4{color:#c00;margin:0 0 .4rem}
-.err-card p{margin:.2rem 0;color:#555;font-size:.91rem}
+.err-card h4{color:var(--red);margin:0 0 .4rem}
+.err-card p{margin:.2rem 0;color:var(--text-muted);font-size:.91rem}
+
+/* ── Info boxes ── */
 .info-box{
-    background:#fffbe6;border-left:5px solid #f0a500;
-    border-radius:10px;padding:1rem 1.4rem;margin-bottom:1rem
+    background:var(--amber-bg);border-left:5px solid var(--amber);
+    border-radius:10px;padding:1rem 1.4rem;margin-bottom:1rem;
 }
 .setup-box{
-    background:#f0f4ff;border-left:5px solid #3355cc;
-    border-radius:10px;padding:1.2rem 1.6rem;margin-bottom:1rem
+    background:var(--blue-bg);border-left:5px solid var(--blue);
+    border-radius:10px;padding:1.2rem 1.6rem;margin-bottom:1rem;
 }
-.setup-box h4{color:#3355cc;margin:0 0 .6rem}
-.setup-box code{background:#dde4ff;padding:2px 6px;border-radius:4px;font-size:.9rem}
-.setup-box pre{background:#dde4ff;padding:.8rem;border-radius:6px;font-size:.82rem;overflow-x:auto}
+.setup-box h4{color:var(--blue);margin:0 0 .6rem}
+.setup-box code{background:var(--blue-code-bg);padding:2px 6px;border-radius:4px;font-size:.9rem}
+.setup-box pre{background:var(--blue-code-bg);padding:.8rem;border-radius:6px;font-size:.82rem;overflow-x:auto}
+
+/* ── Badges ── */
+.badge-eligible{
+    background:var(--green);color:#fff;border-radius:20px;
+    padding:3px 16px;font-size:.8rem;font-weight:600;
+}
+
+/* ── Clearance notice ── */
 .notice{
-    background:linear-gradient(90deg,#006633,#009933);color:#fff;
+    background:linear-gradient(90deg,var(--green),var(--green-mid));color:#fff;
+    border-radius:10px;padding:1rem 1.4rem;text-align:center;
+    font-weight:600;font-size:1rem;margin-top:.5rem;margin-bottom:1.5rem;letter-spacing:.3px;
+}
+
+/* ── Buttons ── */
+.stButton>button{
+    background:var(--green);color:#fff;border-radius:8px;border:none;
+    padding:.5rem 2rem;font-weight:600;font-size:1rem;width:100%;
+    transition:background .18s;
+}
+.stButton>button:hover{background:var(--green-mid)}
+
+/* ── Footer ── */
+.ftr{text-align:center;color:var(--text-faint);font-size:.8rem;margin-top:2.5rem}
+
+/* ── Streamlit overrides ── */
+.stTextInput>div>div>input,
+.stSelectbox>div>div{
+    background:var(--bg) !important;
+    color:var(--text) !important;
+    border-color:var(--border) !important;
+}
+.stDataFrame{background:var(--bg) !important}
+div[data-testid="stMetricValue"]{color:var(--green) !important}
+</style>
+"""
+
+DARK_CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+/* ── Dark theme variables ── */
+:root{
+    --bg:           #0e1210;
+    --bg-secondary: #161e18;
+    --surface:      #1a2b1f;
+    --surface-err:  #2a1515;
+    --surface-warn: #2a2310;
+    --surface-info: #151a2a;
+    --border:       #2a3830;
+    --text:         #e8f5ee;
+    --text-muted:   #a0b8a8;
+    --text-faint:   #607060;
+    --green:        #00cc66;
+    --green-mid:    #00aa55;
+    --green-light:  #00ff80;
+    --green-bg:     #0d2018;
+    --red:          #ff5555;
+    --red-bg:       #2a1010;
+    --amber:        #ffbb33;
+    --amber-bg:     #2a2010;
+    --blue:         #6688ff;
+    --blue-bg:      #101828;
+    --blue-code-bg: #1a2440;
+    --card-shadow:  0 2px 12px rgba(0,0,0,.4);
+    --hdr-shadow:   0 8px 32px rgba(0,0,0,.5);
+}
+
+html,body,[class*="css"]{
+    font-family:'Inter',sans-serif;
+    background-color:var(--bg) !important;
+    color:var(--text) !important;
+}
+
+.stApp{background-color:var(--bg) !important}
+.stSidebar{background-color:var(--bg-secondary) !important}
+section[data-testid="stSidebar"]{background:var(--bg-secondary) !important}
+
+/* ── Header ── */
+.hdr{
+    background:linear-gradient(135deg,#004422,#006633 60%,#009944);
+    border-radius:16px;padding:2rem 2.5rem;text-align:center;
+    margin-bottom:1.5rem;box-shadow:var(--hdr-shadow);
+    border:1px solid #005522;
+}
+.hdr h1{color:#ccffdd;font-size:2rem;font-weight:700;margin:0;letter-spacing:1px}
+.hdr p{color:#88ccaa;font-size:.95rem;margin:.4rem 0 0}
+
+/* ── Cards ── */
+.ok-card{
+    background:var(--green-bg);border-left:5px solid var(--green);
+    border-radius:10px;padding:1.2rem 1.5rem;margin-bottom:.5rem;
+    box-shadow:var(--card-shadow);border:1px solid #1a3a28;
+}
+.ok-card h3{color:var(--green);margin:0 0 .5rem;font-size:1.1rem}
+.ok-card p{margin:.2rem 0;color:var(--text-muted);font-size:.92rem}
+
+.err-card{
+    background:var(--red-bg);border-left:5px solid var(--red);
+    border-radius:10px;padding:1.2rem 1.5rem;margin-bottom:.5rem;
+    border:1px solid #3a1a1a;
+}
+.err-card h4{color:var(--red);margin:0 0 .4rem}
+.err-card p{margin:.2rem 0;color:var(--text-muted);font-size:.91rem}
+
+/* ── Info boxes ── */
+.info-box{
+    background:var(--amber-bg);border-left:5px solid var(--amber);
+    border-radius:10px;padding:1rem 1.4rem;margin-bottom:1rem;
+    border:1px solid #3a2e10;
+}
+.setup-box{
+    background:var(--blue-bg);border-left:5px solid var(--blue);
+    border-radius:10px;padding:1.2rem 1.6rem;margin-bottom:1rem;
+    border:1px solid #1a2440;
+}
+.setup-box h4{color:var(--blue);margin:0 0 .6rem}
+.setup-box code{background:var(--blue-code-bg);color:#aaccff;padding:2px 6px;border-radius:4px;font-size:.9rem}
+.setup-box pre{background:var(--blue-code-bg);color:#aaccff;padding:.8rem;border-radius:6px;font-size:.82rem;overflow-x:auto}
+
+/* ── Badges ── */
+.badge-eligible{
+    background:var(--green);color:#001a0d;border-radius:20px;
+    padding:3px 16px;font-size:.8rem;font-weight:700;
+}
+
+/* ── Clearance notice ── */
+.notice{
+    background:linear-gradient(90deg,#004422,#006633);color:#ccffdd;
     border-radius:10px;padding:1rem 1.4rem;text-align:center;
     font-weight:600;font-size:1rem;margin-top:.5rem;margin-bottom:1.5rem;
-    letter-spacing:.3px
+    letter-spacing:.3px;border:1px solid #005522;
 }
+
+/* ── Buttons ── */
 .stButton>button{
-    background:#006633;color:#fff;border-radius:8px;border:none;
-    padding:.5rem 2rem;font-weight:600;font-size:1rem;width:100%
+    background:var(--green);color:#001a0d;border-radius:8px;border:none;
+    padding:.5rem 2rem;font-weight:700;font-size:1rem;width:100%;
+    transition:background .18s;
 }
-.stButton>button:hover{background:#009933}
-.del-btn button{background:#c00 !important}
-.del-btn button:hover{background:#990000 !important}
-.ftr{text-align:center;color:#aaa;font-size:.8rem;margin-top:2.5rem}
+.stButton>button:hover{background:var(--green-mid);color:#fff}
+
+/* ── Footer ── */
+.ftr{text-align:center;color:var(--text-faint);font-size:.8rem;margin-top:2.5rem}
+
+/* ── Streamlit overrides ── */
+.stTextInput>div>div>input{
+    background:var(--bg-secondary) !important;
+    color:var(--text) !important;
+    border-color:var(--border) !important;
+}
+.stSelectbox>div>div{
+    background:var(--bg-secondary) !important;
+    color:var(--text) !important;
+}
+.stNumberInput>div>div>input{
+    background:var(--bg-secondary) !important;
+    color:var(--text) !important;
+}
+.stDataFrame{background:var(--bg-secondary) !important}
+.stDataFrame td,.stDataFrame th{
+    background:var(--bg-secondary) !important;
+    color:var(--text) !important;
+}
+div[data-testid="stMetricValue"]{color:var(--green) !important}
+div[data-testid="stMetricLabel"]{color:var(--text-muted) !important}
+.stTabs [data-baseweb="tab-list"]{background:var(--bg-secondary) !important}
+.stTabs [data-baseweb="tab"]{color:var(--text-muted) !important}
+.stTabs [aria-selected="true"]{color:var(--green) !important}
+.stMarkdown p,.stMarkdown li{color:var(--text) !important}
+.stCaption{color:var(--text-faint) !important}
+label{color:var(--text) !important}
+.stAlert{background:var(--bg-secondary) !important}
+hr{border-color:var(--border) !important}
 </style>
-""", unsafe_allow_html=True)
+"""
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 DEPARTMENTS = [
@@ -107,10 +302,15 @@ for k, v in {
     "edit_sn": None,
     "confirm_del": None,
     "confirm_clear_all": False,
-    "students_loaded": False,   # have we fetched from GitHub yet this session?
+    "students_loaded": False,
+    "theme": "light",
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
+
+# ── Inject theme CSS ───────────────────────────────────────────────────────────
+st.markdown(DARK_CSS if st.session_state.theme == "dark" else LIGHT_CSS,
+            unsafe_allow_html=True)
 
 # ── Auto-load students from GitHub once per session ───────────────────────────
 if not st.session_state.students_loaded:
@@ -161,7 +361,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-nav_l, nav_m, nav_r = st.columns([4, 1, 1])
+nav_l, nav_m, nav_r, nav_theme = st.columns([3.5, 1, 1, 0.7])
 with nav_l:
     # Subtle background sync indicator — only visible to logged-in admins
     if st.session_state.admin_logged_in:
@@ -175,6 +375,11 @@ with nav_l:
                 st.caption("✅ All changes synced")
         except Exception:
             pass
+with nav_theme:
+    is_dark = st.session_state.theme == "dark"
+    if st.button("🌙" if not is_dark else "☀️", help="Toggle light/dark theme"):
+        st.session_state.theme = "dark" if not is_dark else "light"
+        st.rerun()
 with nav_m:
     if st.session_state.view == "student":
         if st.button("\U0001F512 Admin"):
