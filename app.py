@@ -402,7 +402,7 @@ def admin_panel_view():
                                          help="Exactly 11 digits")
             with fa2:
                 a_jamb   = st.text_input("JAMB Reg Number *", placeholder="202550551834BF",
-                                         help="10 digits + 2 letters")
+                                         help="12 digits + 2 letters")
 
             a_dept = st.selectbox("Department *", DEPARTMENTS)
 
@@ -422,8 +422,8 @@ def admin_panel_view():
             if not a_first.strip():    errs.append("First name is required.")
             if not re.match(r"^\d{11}$", a_matric.strip()):
                 errs.append("Matric Number must be exactly 11 digits.")
-            if not re.match(r"^\d{10}[A-Za-z]{2}$", a_jamb.strip()):
-                errs.append("JAMB Reg must be 10 digits followed by 2 letters.")
+            if not re.match(r"^\d{12}[A-Za-z]{2}$", a_jamb.strip()):
+                errs.append("JAMB Reg must be 12 digits followed by 2 letters.")
 
             # Check duplicates
             if df is not None and not df.empty:
@@ -497,7 +497,7 @@ def admin_panel_view():
                     st.error(f"Missing columns: {', '.join(sorted(missing))}")
                 else:
                     bad_m = raw[~raw["Matric_Number"].astype(str).str.match(r"^\d{11}$")]
-                    bad_j = raw[~raw["Jamb_Reg"].astype(str).str.match(r"^\d{10}[A-Za-z]{2}$")]
+                    bad_j = raw[~raw["Jamb_Reg"].astype(str).str.match(r"^\d{12}[A-Za-z]{2}$")]
                     if not bad_m.empty:
                         st.warning(f"\u26A0\uFE0F {len(bad_m)} invalid Matric Number(s): {bad_m['Name'].tolist()}")
                     if not bad_j.empty:
@@ -705,8 +705,8 @@ def _render_student_table(df: pd.DataFrame):
                 if not e_fst.strip(): errs.append("First name is required.")
                 if not re.match(r"^\d{11}$", e_mat.strip()):
                     errs.append("Matric Number must be exactly 11 digits.")
-                if not re.match(r"^\d{10}[A-Za-z]{2}$", e_jmb.strip()):
-                    errs.append("JAMB Reg must be 10 digits + 2 letters.")
+                if not re.match(r"^\d{12}[A-Za-z]{2}$", e_jmb.strip()):
+                    errs.append("JAMB Reg must be 12 digits + 2 letters.")
                 # Duplicate check (excluding current row)
                 others = full_df[full_df["SN"] != edit_sn]
                 if e_mat.strip() in others["Matric_Number"].astype(str).values:
